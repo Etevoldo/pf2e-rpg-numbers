@@ -97,13 +97,14 @@ Hooks.on("ready", () => {
  * @returns {object} returns.item - Item information with name property
  */
 function getData(msg) {
+    const pf2eflags = msg.flags?.pf2e ?? msg.flags?.sf2e;
     return {
         isDamageRoll: msg.isDamageRoll,
         isCheckRoll: msg.isCheckRoll,
-        isAttackRoll: msg.flags?.pf2e?.context?.type === "attack-roll",
-        isApplyDamage: !!msg.flags?.pf2e?.appliedDamage,
-        isAppliedHealing: msg.flags?.pf2e?.appliedDamage?.isHealing,
-        appliedDamage: msg.flags.pf2e?.appliedDamage,
+        isAttackRoll: pf2eflags?.context?.type === "attack-roll",
+        isApplyDamage: !!pf2eflags?.appliedDamage,
+        isAppliedHealing: pf2eflags?.appliedDamage?.isHealing,
+        appliedDamage: pf2eflags?.appliedDamage,
         item: {
             name: msg?.item?.name ?? "",
         },
@@ -176,21 +177,22 @@ function isDodgeOnMiss(outcome) {
  * @param {object} msg - The chat message object
  */
 export function checkRollNumbers(dat, msg) {
+    const pf2eflags = msg.flags?.pf2e ?? msg.flags?.sf2e;
     const doChecks = getSetting("check-enabled");
     const doCrits =
         shouldDoCrits(
             msg?.token?.actor?.getFlag("pf2e-rpg-numbers", "critical"),
-            msg?.flags?.pf2e?.context?.outcome ?? "none"
-        ) && msg?.flags?.pf2e?.context?.type !== "flat-check";
+            pf2eflags?.context?.outcome ?? "none"
+        ) && pf2eflags?.context?.type !== "flat-check";
     //const doCritFailures = getSetting("critical.failure.enabled");
     if (dat.isCheckRoll && (doChecks || doCrits)) {
         const roll_deets = {
-            outcome: msg?.flags?.pf2e?.context?.outcome ?? "none",
+            outcome: pf2eflags?.context?.outcome ?? "none",
             token: msg.token,
             whisper: msg.whisper,
             roll: msg.rolls[0]?.total ?? "",
-            type: msg.flags.pf2e.context.type,
-            target: msg?.flags?.pf2e?.context?.target,
+            type: pf2eflags.context.type,
+            target: pf2eflags?.context?.target,
         };
         if (doChecks) {
             generateRollScroll(roll_deets);
@@ -313,15 +315,16 @@ export async function handleMessage(msg, userid, dontWait = false) {
 
             //Attack Roll Stuff
             if (dat.isAttackRoll) {
+                const pf2eflags = msg.flags.pf2e ?? msg.flags.sf2e;
                 // Rotate on Attack Roll
                 if (isRotateOnAttack()) {
                     rotateOnAttack(msg);
                 }
                 if (isShakeOnAttack(msg.token.actor)) {
-                    shakeOnAttack(msg.token, msg.flags.pf2e.context.outcome);
+                    shakeOnAttack(msg.token, pf2eflags.context.outcome);
                 }
 
-                if (msg?.token && msg?.target?.token && isDodgeOnMiss(msg.flags.pf2e.context?.outcome ?? "none")) {
+                if (msg?.token && msg?.target?.token && isDodgeOnMiss(pf2eflags.context?.outcome ?? "none")) {
                     handleDodgeOnMiss(msg?.token?.object, msg?.target?.token?.object);
                 }
             }
